@@ -139,6 +139,25 @@
   }
   input.filled{ border-color: #9CC7A1; background: #F5FBF6; }
 
+  select{
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: var(--ink);
+    background: #FBFCFD;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  select:focus{
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(67,199,253,.25);
+    background: #fff;
+  }
+  select.filled{ border-color: #9CC7A1; background: #F5FBF6; }
+
   .actions{ display:flex; flex-direction: column; gap: 10px; margin-top: 6px; }
   button.primary{
     background: var(--navy);
@@ -359,8 +378,17 @@
         </div>
 
         <div class="field">
-          <label for="nome_cargo">Nome e Cargo</label>
-          <input type="text" id="nome_cargo" placeholder="NOME / CARGO">
+          <label for="nome">Nome</label>
+          <input type="text" id="nome" placeholder="Nome completo">
+        </div>
+
+        <div class="field">
+          <label for="cargo">Cargo</label>
+          <select id="cargo">
+            <option value="">Selecione</option>
+            <option value="Proprietário">Proprietário</option>
+            <option value="Administrador">Administrador</option>
+          </select>
         </div>
       </fieldset>
 
@@ -429,7 +457,7 @@
           <p class="sign-line">&nbsp;</p>
           <p class="oblig-field">Nome do Concessionário/Lojista: <span class="out" data-field="nome_lojista" data-ph="[Nome do Concessionário/Lojista]">[Nome do Concessionário/Lojista]</span></p>
           <p class="oblig-field">CNPJ: <span class="out" data-field="cnpj" data-ph="[CNPJ]">[CNPJ]</span></p>
-          <p class="oblig-field">Nome e Cargo: <span class="out" data-field="nome_cargo" data-ph="[NOME / CARGO]">[NOME / CARGO]</span></p>
+          <p class="oblig-field">Nome e Cargo: <span class="out ph" id="out-nome-cargo">[NOME / CARGO]</span></p>
         </div>
 
         <div class="doc-footer">
@@ -444,12 +472,17 @@
 
 <script>
 (function(){
-  var FIELDS = ["valor","credito_numero","chassi","nome_lojista","cnpj","nome_cargo"];
+  var FIELDS = ["valor","credito_numero","chassi","nome_lojista","cnpj","nome","cargo"];
   var CNPJ_ONLY_FIELDS = ["cnpj"];
   var CURRENCY_FIELDS = ["valor"];
+  var TITLE_CASE_FIELDS = ["nome_lojista","nome"];
   var STORAGE_KEY = "formulario-pagamento-cdc-premiado-v1";
 
   function onlyDigits(v){ return (v || "").replace(/\D/g, ""); }
+
+  function toTitleCase(value){
+    return (value || "").toLowerCase().replace(/(^|\s)\S/g, function(c){ return c.toUpperCase(); });
+  }
 
   function maskCNPJ(value){
     var d = onlyDigits(value).slice(0, 14);
@@ -496,9 +529,10 @@
       var input = document.getElementById(f);
       var outs = document.querySelectorAll('.out[data-field="' + f + '"]');
       var rawVal = data[f] ? data[f].trim() : "";
+      var displayVal = (rawVal && TITLE_CASE_FIELDS.indexOf(f) !== -1) ? toTitleCase(rawVal) : rawVal;
       outs.forEach(function(out){
         if(rawVal){
-          out.textContent = rawVal;
+          out.textContent = displayVal;
           out.classList.remove("ph");
         } else {
           out.textContent = out.getAttribute("data-ph");
@@ -507,6 +541,20 @@
       });
       if(rawVal){ input.classList.add("filled"); } else { input.classList.remove("filled"); }
     });
+
+    var nomeVal = data.nome ? data.nome.trim() : "";
+    var cargoVal = data.cargo ? data.cargo.trim() : "";
+    var outNomeCargo = document.getElementById("out-nome-cargo");
+    if(!nomeVal && !cargoVal){
+      outNomeCargo.textContent = "[NOME / CARGO]";
+      outNomeCargo.classList.add("ph");
+    } else {
+      var nomePart = nomeVal ? toTitleCase(nomeVal) : "[NOME]";
+      var cargoPart = cargoVal ? cargoVal : "[CARGO]";
+      outNomeCargo.textContent = nomePart + " / " + cargoPart;
+      outNomeCargo.classList.remove("ph");
+    }
+
     save(data);
     updateStatus(data);
   }
@@ -555,6 +603,7 @@
         });
       } else {
         input.addEventListener("input", render);
+        input.addEventListener("change", render);
       }
     });
 
